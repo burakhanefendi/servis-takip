@@ -157,8 +157,15 @@ class ServisController extends Controller
             return redirect()->route('servis.show', $id)
                 ->with('error', 'Bu servis zaten tamamlanmış!');
         }
-
-        return view('servis.complete', compact('servis'));
+        
+        // Bu müşteriye ait aktif bakım takibi var mı kontrol et
+        $mevcutBakim = Servis::where('cari_hesap_id', $servis->cari_hesap_id)
+            ->whereNotNull('periyodik_bakim')
+            ->whereNotNull('bakim_tarihi')
+            ->where('bakim_tarihi', '>', now()) // Gelecekteki bakımlar
+            ->first();
+        
+        return view('servis.complete', compact('servis', 'mevcutBakim'));
     }
 
     // Servis tamamlama işlemi
@@ -200,6 +207,19 @@ class ServisController extends Controller
                 }
             }
 
+            // Bu müşteriye ait aktif bakım var mı kontrol et
+            $mevcutBakim = Servis::where('cari_hesap_id', $servis->cari_hesap_id)
+                ->whereNotNull('periyodik_bakim')
+                ->whereNotNull('bakim_tarihi')
+                ->where('bakim_tarihi', '>', now())
+                ->where('id', '!=', $servis->id)
+                ->first();
+            
+            // Eğer mevcut bakım varsa, yeni periyodik bakım bilgisi kaydetme
+            $periyodikBakim = $mevcutBakim ? null : $request->periyodik_bakim;
+            $bakimTarihi = $mevcutBakim ? null : $request->bakim_tarihi;
+            $smsHatirlatma = $mevcutBakim ? false : ($request->has('sms_hatirlatma') ? true : false);
+            
             // Servis bilgilerini güncelle
             $servis->update([
                 'yapilan_islemler' => $request->yapilan_islemler,
@@ -208,9 +228,9 @@ class ServisController extends Controller
                 'hesaplanan_kdv' => $request->hesaplanan_kdv ?? 0,
                 'vergiler_dahil_toplam' => $request->vergiler_dahil_toplam,
                 'servis_sonucu' => $request->servis_sonucu,
-                'periyodik_bakim' => $request->periyodik_bakim,
-                'bakim_tarihi' => $request->bakim_tarihi,
-                'sms_hatirlatma' => $request->has('sms_hatirlatma') ? true : false,
+                'periyodik_bakim' => $periyodikBakim,
+                'bakim_tarihi' => $bakimTarihi,
+                'sms_hatirlatma' => $smsHatirlatma,
                 'islem_garantisi' => $request->islem_garantisi,
                 'odeme_yontemi' => $request->odeme_yontemi,
                 'durum' => 'Tamamlandı',
@@ -236,20 +256,30 @@ class ServisController extends Controller
     // Bakım Listesi
     public function bakimListesi(Request $request)
     {
-        $query = Servis::with('cariHesap')
+        // Her müşteri için sadece en son bakım kaydını getir
+        $subQuery = DB::table('servisler')
+            ->select('cari_hesap_id', DB::raw('MAX(id) as max_id'))
             ->whereNotNull('periyodik_bakim')
-            ->where('durum', 'Tamamlandı');
+            ->whereNotNull('bakim_tarihi')
+            ->where('durum', 'Tamamlandı')
+            ->groupBy('cari_hesap_id');
+
+        $query = Servis::select('servisler.*')
+            ->with('cariHesap')
+            ->joinSub($subQuery, 'latest_bakim', function ($join) {
+                $join->on('servisler.id', '=', 'latest_bakim.max_id');
+            });
 
         // Periyodik bakım filtresi
         if ($request->filled('periyodik_bakim')) {
-            $query->where('periyodik_bakim', $request->periyodik_bakim);
+            $query->where('servisler.periyodik_bakim', $request->periyodik_bakim);
         }
 
         // Arama
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('servis_no', 'LIKE', "%{$search}%")
+                $q->where('servisler.servis_no', 'LIKE', "%{$search}%")
                   ->orWhereHas('cariHesap', function($q) use ($search) {
                       $q->where('cari_hesap_adi', 'LIKE', "%{$search}%");
                   });
@@ -257,7 +287,7 @@ class ServisController extends Controller
         }
 
         // Bakım tarihi durumuna göre sıralama
-        $servisler = $query->orderBy('bakim_tarihi', 'asc')->paginate(20);
+        $servisler = $query->orderBy('servisler.bakim_tarihi', 'asc')->paginate(20);
         
         // Her servise "durum" ekle (geçmiş/yaklaşan/normal)
         $servisler->getCollection()->transform(function ($servis) {
@@ -275,7 +305,7 @@ class ServisController extends Controller
                     $servis->bakim_durum = 'normal'; // Normal (yeşil)
                 }
                 
-                $servis->gun_farki = abs($gunFarki);
+                $servis->gun_farki = round(abs($gunFarki));
             } else {
                 $servis->bakim_durum = 'belirsiz';
                 $servis->gun_farki = null;
@@ -366,5 +396,41 @@ class ServisController extends Controller
                 'message' => 'Bir hata oluştu: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    // Bakım Detay Sayfası
+    public function bakimShow($id)
+    {
+        $bakim = Servis::with('cariHesap')->findOrFail($id);
+        
+        // O müşterinin geçmiş servislerini getir (Tamamlanmış tüm servisler)
+        $gecmisBakimlar = Servis::where('cari_hesap_id', $bakim->cari_hesap_id)
+            ->where('durum', 'Tamamlandı')
+            ->where('id', '!=', $id)
+            ->orderBy('tamamlanma_tarihi', 'desc')
+            ->get();
+        
+        // Mevcut bakımın durumunu hesapla
+        $bakimTarihi = $bakim->bakim_tarihi;
+        $today = now();
+        
+        if ($bakimTarihi) {
+            $gunFarki = $today->diffInDays($bakimTarihi, false);
+            
+            if ($gunFarki < 0) {
+                $bakim->bakim_durum = 'gecmis';
+            } elseif ($gunFarki <= 7) {
+                $bakim->bakim_durum = 'yaklasan';
+            } else {
+                $bakim->bakim_durum = 'normal';
+            }
+            
+            $bakim->gun_farki = round(abs($gunFarki));
+        } else {
+            $bakim->bakim_durum = 'bekliyor';
+            $bakim->gun_farki = null;
+        }
+        
+        return view('bakim.show', compact('bakim', 'gecmisBakimlar'));
     }
 }

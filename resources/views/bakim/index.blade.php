@@ -42,12 +42,12 @@
             border-radius: 8px;
             font-size: 14px;
         }
-        .search-box::before {
-            content: '🔍';
+        .search-box i {
             position: absolute;
             left: 12px;
             top: 50%;
             transform: translateY(-50%);
+            color: #999;
         }
         .filter-select {
             padding: 10px 15px;
@@ -196,8 +196,8 @@
 <body>
     <header class="header">
         <div class="header-left">
-            <button class="menu-toggle" id="menuToggle">☰</button>
-            <h1>💧 Servis Takip Sistemi</h1>
+            <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+            <h1><i class="fas fa-tools"></i> Servis Takip Sistemi</h1>
         </div>
         <div class="header-right">
             <div class="user-info">
@@ -216,8 +216,8 @@
 
         <main class="main-content">
             <div class="content-header">
-                <h2>📋 Periyodik Bakım Listesi</h2>
-                <a href="{{ route('bakim.create') }}" class="btn btn-primary">➕ Bakım Ekle</a>
+                <h2><i class="fas fa-clipboard-list"></i> Periyodik Bakım Listesi</h2>
+                <a href="{{ route('bakim.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Bakım Ekle</a>
             </div>
 
             <!-- İstatistikler -->
@@ -244,6 +244,7 @@
                 <div class="table-header">
                     <div class="search-filter">
                         <div class="search-box">
+                            <i class="fas fa-search"></i>
                             <input type="text" id="searchInput" placeholder="Servis no veya müşteri adı ile ara..." value="{{ request('search') }}">
                         </div>
                         <select class="filter-select" id="periyodikBakimFilter">
@@ -272,13 +273,13 @@
                     </thead>
                     <tbody>
                         @foreach($servisler as $servis)
-                        <tr onclick="window.location.href='{{ route('servis.show', $servis->id) }}'">
+                        <tr onclick="window.location.href='{{ route('bakim.show', $servis->id) }}'">
                             <td><strong>{{ $servis->servis_no }}</strong></td>
                             <td>
                                 <div>{{ $servis->cariHesap->cari_hesap_adi }}</div>
                                 <small style="color: #999;">{{ $servis->cariHesap->musteri_kodu }}</small>
                                 @if($servis->sms_hatirlatma)
-                                <span class="sms-icon" title="SMS Hatırlatma Aktif">📱</span>
+                                <span class="sms-icon" title="SMS Hatırlatma Aktif"><i class="fas fa-mobile-alt"></i></span>
                                 @endif
                             </td>
                             <td>{{ $servis->marka }} {{ $servis->model }}</td>
@@ -300,17 +301,17 @@
                             <td>
                                 <span class="bakim-badge bakim-{{ $servis->bakim_durum }}">
                                     @if($servis->bakim_durum == 'gecmis')
-                                        🔴 Geçmiş
+                                        <i class="fas fa-circle" style="color: #dc3545;"></i> Geçmiş
                                     @elseif($servis->bakim_durum == 'yaklasan')
-                                        🟡 Yaklaşan
+                                        <i class="fas fa-circle" style="color: #ffc107;"></i> Yaklaşan
                                     @else
-                                        🟢 Normal
+                                        <i class="fas fa-circle" style="color: #28a745;"></i> Normal
                                     @endif
                                 </span>
                             </td>
                             <td onclick="event.stopPropagation();">
-                                <button class="btn-detay" onclick="window.location.href='{{ route('servis.show', $servis->id) }}'">
-                                    👁️ Detay
+                                <button class="btn-detay" onclick="window.location.href='{{ route('bakim.show', $servis->id) }}'">
+                                    <i class="fas fa-eye"></i> Detay
                                 </button>
                             </td>
                         </tr>
@@ -328,7 +329,7 @@
                 </div>
                 @else
                 <div class="empty-state">
-                    <div class="empty-state-icon">📅</div>
+                    <div class="empty-state-icon"><i class="fas fa-calendar-alt"></i></div>
                     <h3>Henüz periyodik bakım kaydı yok</h3>
                     <p>Periyodik bakımı olan servisler burada görünecektir.</p>
                 </div>

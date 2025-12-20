@@ -12,8 +12,8 @@
 <body>
     <header class="header">
         <div class="header-left">
-            <button class="menu-toggle" id="menuToggle">☰</button>
-            <h1>💧 Servis Takip Sistemi</h1>
+            <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+            <h1><i class="fas fa-tools"></i> Servis Takip Sistemi</h1>
         </div>
         <div class="header-right">
             <div class="user-info">
@@ -32,7 +32,7 @@
 
         <main class="main-content">
             <div class="content-header">
-                <h2>📋 Manuel Bakım Ekle</h2>
+                <h2><i class="fas fa-clipboard-list"></i> Manuel Bakım Ekle</h2>
                 <a href="{{ route('bakim.index') }}" class="btn btn-secondary">⬅ Bakım Listesi</a>
             </div>
 

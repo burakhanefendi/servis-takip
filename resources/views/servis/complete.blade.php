@@ -269,6 +269,28 @@
                                 </div>
                             </div>
 
+                            @if($mevcutBakim)
+                            <!-- Mevcut Bakım Uyarısı -->
+                            <div class="alert alert-info" style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="fas fa-info-circle" style="font-size: 24px; color: #2196f3;"></i>
+                                    <div>
+                                        <strong>Bu müşteri için zaten aktif bakım takibi bulunmaktadır</strong>
+                                        <div style="margin-top: 5px; color: #0d47a1;">
+                                            <strong>Periyot:</strong> {{ $mevcutBakim->periyodik_bakim }}<br>
+                                            <strong>Bakım Tarihi:</strong> {{ $mevcutBakim->bakim_tarihi ? $mevcutBakim->bakim_tarihi->format('d.m.Y') : '-' }}<br>
+                                            <strong>Servis No:</strong> {{ $mevcutBakim->servis_no }}
+                                        </div>
+                                        <div style="margin-top: 10px;">
+                                            <a href="{{ route('bakim.show', $mevcutBakim->id) }}" target="_blank" class="btn btn-sm btn-primary" style="padding: 5px 12px; font-size: 13px;">
+                                                <i class="fas fa-external-link-alt"></i> Bakım Detayını Görüntüle
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @else
+                            <!-- Periyodik Bakım Seçenekleri -->
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Periyodik Bakım</label>
@@ -289,6 +311,16 @@
 
                             <div class="form-row">
                                 <div class="form-group">
+                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                        <input type="checkbox" name="sms_hatirlatma" value="1" style="width: auto; cursor: pointer;">
+                                        <span>SMS Hatırlatma Gönder</span>
+                                    </label>
+                                </div>
+                            </div>
+                            @endif
+
+                            <div class="form-row">
+                                <div class="form-group">
                                     <label>İşlem Garantisi</label>
                                     <input type="text" name="islem_garantisi" class="form-control" placeholder="Örn: 1 Yıl, 6 Ay, vs.">
                                 </div>
@@ -301,15 +333,6 @@
                                         <option value="EFT/Havale">EFT/Havale</option>
                                         <option value="Çek">Çek</option>
                                     </select>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                                        <input type="checkbox" name="sms_hatirlatma" value="1" style="width: auto; cursor: pointer;">
-                                        <span>SMS Hatırlatma Gönder</span>
-                                    </label>
                                 </div>
                             </div>
                         </div>

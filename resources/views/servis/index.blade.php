@@ -7,7 +7,103 @@
     <title>Servis Durumu - Servis Takip</title>
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ asset('css/form.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Stat kartlar - Kompakt Tasarım */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 100px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover::before {
+            transform: translateX(0);
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .stat-card.active {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transform: scale(1.02);
+        }
+        .stat-card.acik { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card.tamamlanan { background: linear-gradient(135deg, #06beb6 0%, #48b1bf 100%); }
+        .stat-card.iptal { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-card.bakim { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        
+        .stat-content {
+            z-index: 1;
+        }
+        .stat-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+        }
+        .stat-icon {
+            font-size: 40px;
+            color: rgba(255,255,255,0.3);
+            z-index: 0;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 576px) {
+            .stat-card {
+                padding: 15px;
+                min-height: 85px;
+            }
+            .stat-title {
+                font-size: 11px;
+            }
+            .stat-number {
+                font-size: 24px;
+            }
+            .stat-icon {
+                font-size: 30px;
+            }
+        }
+
         .servis-table {
             background: white;
             border-radius: 12px;
@@ -213,22 +309,65 @@
                 <a href="{{ route('servis.create') }}" class="btn btn-primary">➕ Yeni Servis Ekle</a>
             </div>
 
+            <!-- Stat Kartlar -->
+            <div class="stats-container">
+                <a href="{{ route('servis.index', ['kategori' => 'acik']) }}" class="stat-card acik {{ $kategori == 'acik' ? 'active' : '' }}">
+                    <div class="stat-content">
+                        <div class="stat-title">Açık Servis</div>
+                        <div class="stat-number">{{ $stats['acik'] }}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                </a>
+
+                <a href="{{ route('servis.index', ['kategori' => 'tamamlanan']) }}" class="stat-card tamamlanan {{ $kategori == 'tamamlanan' ? 'active' : '' }}">
+                    <div class="stat-content">
+                        <div class="stat-title">Tamamlandı</div>
+                        <div class="stat-number">{{ $stats['tamamlanan'] }}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </a>
+
+                <a href="{{ route('servis.index', ['kategori' => 'iptal']) }}" class="stat-card iptal {{ $kategori == 'iptal' ? 'active' : '' }}">
+                    <div class="stat-content">
+                        <div class="stat-title">İptal Servis</div>
+                        <div class="stat-number">{{ $stats['iptal'] }}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                </a>
+
+                <a href="{{ route('servis.index', ['kategori' => 'bakim']) }}" class="stat-card bakim {{ $kategori == 'bakim' ? 'active' : '' }}">
+                    <div class="stat-content">
+                        <div class="stat-title">Bakım</div>
+                        <div class="stat-number">{{ $stats['bakim'] }}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </a>
+            </div>
+
             <div class="servis-table">
                 <div class="table-header">
                     <div class="search-filter">
                         <div class="search-box">
                             <input type="text" id="searchInput" placeholder="Servis no veya müşteri adı ile ara..." value="{{ request('search') }}">
                         </div>
+                        @if($kategori == 'acik')
                         <select class="filter-select" id="durumFilter">
-                            <option value="">Tüm Durumlar</option>
+                            <option value="">Tüm Açık Servisler</option>
                             <option value="Beklemede" {{ request('durum') == 'Beklemede' ? 'selected' : '' }}>Beklemede</option>
                             <option value="İşlemde" {{ request('durum') == 'İşlemde' ? 'selected' : '' }}>İşlemde</option>
-                            <option value="Tamamlandı" {{ request('durum') == 'Tamamlandı' ? 'selected' : '' }}>Tamamlandı</option>
-                            <option value="İptal" {{ request('durum') == 'İptal' ? 'selected' : '' }}>İptal</option>
                         </select>
+                        @endif
                     </div>
                     <div>
-                        <strong>{{ $servisler->total() }}</strong> servis
+                        <strong>{{ $servisler->total() }}</strong> kayıt
                     </div>
                 </div>
 
@@ -335,9 +474,11 @@
                 clearTimeout(searchTimeout);
                 const search = $(this).val();
                 const durum = $('#durumFilter').val();
+                const kategori = '{{ $kategori }}';
                 
                 searchTimeout = setTimeout(function() {
                     const params = new URLSearchParams();
+                    if (kategori) params.append('kategori', kategori);
                     if (search) params.append('search', search);
                     if (durum) params.append('durum', durum);
                     
@@ -349,8 +490,10 @@
             $('#durumFilter').on('change', function() {
                 const search = $('#searchInput').val();
                 const durum = $(this).val();
+                const kategori = '{{ $kategori }}';
                 
                 const params = new URLSearchParams();
+                if (kategori) params.append('kategori', kategori);
                 if (search) params.append('search', search);
                 if (durum) params.append('durum', durum);
                 

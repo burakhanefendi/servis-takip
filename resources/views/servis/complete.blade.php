@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ asset('css/form.css') }}">
     <link rel="stylesheet" href="{{ asset('css/stepper.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .product-row {
             background: #f8f9fa;
@@ -224,29 +225,37 @@
                         <div id="step3" class="step-content">
                             <h3 class="section-title">💵 Ücret Özeti</h3>
                             
-                            <div class="summary-table">
-                                <div class="summary-row">
-                                    <span>Mal Hizmet Tutarı:</span>
-                                    <span id="summarySubtotal">0.00 ₺</span>
+                            <div class="alert alert-info" style="margin-bottom: 20px; padding: 12px; background: #e3f2fd; border-left: 4px solid #2196f3; font-size: 14px;">
+                                ℹ️ Otomatik hesaplanan tutarları manuel olarak değiştirebilirsiniz.
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Mal Hizmet Tutarı (KDV Hariç)</label>
+                                    <input type="number" name="toplam_mal_hizmet_tutari" id="inputSubtotal" class="form-control manual-price" step="0.01" min="0" value="0.00">
                                 </div>
-                                <div class="summary-row">
-                                    <span>Toplam İskonto:</span>
-                                    <span id="summaryDiscount">0.00 ₺</span>
-                                </div>
-                                <div class="summary-row">
-                                    <span>Hesaplanan KDV:</span>
-                                    <span id="summaryKdv">0.00 ₺</span>
-                                </div>
-                                <div class="summary-row total">
-                                    <span>Vergiler Dahil Toplam Tutar:</span>
-                                    <span id="summaryTotal">0.00 ₺</span>
+                                <div class="form-group">
+                                    <label>İskonto Tutarı</label>
+                                    <input type="number" name="toplam_iskonto" id="inputDiscount" class="form-control manual-price" step="0.01" min="0" value="0.00">
                                 </div>
                             </div>
 
-                            <input type="hidden" name="toplam_mal_hizmet_tutari" id="inputSubtotal">
-                            <input type="hidden" name="toplam_iskonto" id="inputDiscount">
-                            <input type="hidden" name="hesaplanan_kdv" id="inputKdv">
-                            <input type="hidden" name="vergiler_dahil_toplam" id="inputTotal">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>KDV Tutarı</label>
+                                    <input type="number" name="hesaplanan_kdv" id="inputKdv" class="form-control manual-price" step="0.01" min="0" value="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label><strong>Toplam Tutar (KDV Dahil)</strong></label>
+                                    <input type="number" name="vergiler_dahil_toplam" id="inputTotal" class="form-control manual-price" step="0.01" min="0" value="0.00" style="font-weight: 700; font-size: 18px; color: #2e7d32;">
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 15px;">
+                                <button type="button" class="btn-add-product" id="btnRecalculate">
+                                    🔄 Otomatik Hesapla
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Step 4: Servis Sonucu -->

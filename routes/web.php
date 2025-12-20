@@ -42,6 +42,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/servis/{id}/complete', [ServisController::class, 'complete'])->name('servis.complete');
     Route::post('/servis/{id}/finish', [ServisController::class, 'finish'])->name('servis.finish');
     
+    // Bakım Listesi
+    Route::get('/bakim-listesi', [ServisController::class, 'bakimListesi'])->name('bakim.index');
+    Route::get('/bakim/create', [ServisController::class, 'bakimCreate'])->name('bakim.create');
+    Route::post('/bakim', [ServisController::class, 'bakimStore'])->name('bakim.store');
+    
     // API - Cari Arama
     Route::get('/api/cari/search', [ServisController::class, 'searchCari'])->name('api.cari.search');
 });

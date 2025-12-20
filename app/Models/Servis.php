@@ -51,6 +51,11 @@ class Servis extends Model
         'islem_garantisi',
         'odeme_yontemi',
         'tamamlanma_tarihi',
+        // Manuel bakım alanları
+        'ilk_bakim_tarihi',
+        'bakim_icerigi',
+        'bakim_lokasyonu',
+        'hatirlatma_zamani',
     ];
 
     protected $casts = [
@@ -65,6 +70,8 @@ class Servis extends Model
         'bakim_tarihi' => 'date',
         'sms_hatirlatma' => 'boolean',
         'tamamlanma_tarihi' => 'datetime',
+        'ilk_bakim_tarihi' => 'datetime',
+        'hatirlatma_zamani' => 'datetime',
     ];
 
     // İlişkiler

@@ -220,16 +220,30 @@ $(document).ready(function() {
             totalWithKdv += total;
         });
 
-        $('#summarySubtotal').text(totalSubtotal.toFixed(2) + ' ₺');
-        $('#summaryDiscount').text('0.00 ₺');
-        $('#summaryKdv').text(totalKdv.toFixed(2) + ' ₺');
-        $('#summaryTotal').text(totalWithKdv.toFixed(2) + ' ₺');
-
         $('#inputSubtotal').val(totalSubtotal.toFixed(2));
         $('#inputDiscount').val('0.00');
         $('#inputKdv').val(totalKdv.toFixed(2));
         $('#inputTotal').val(totalWithKdv.toFixed(2));
     }
+
+    // Manuel fiyat değişiminde toplam tutarı yeniden hesapla
+    $(document).on('input', '#inputSubtotal, #inputDiscount, #inputKdv', function() {
+        const subtotal = parseFloat($('#inputSubtotal').val()) || 0;
+        const discount = parseFloat($('#inputDiscount').val()) || 0;
+        const kdv = parseFloat($('#inputKdv').val()) || 0;
+        
+        const total = subtotal - discount + kdv;
+        $('#inputTotal').val(total.toFixed(2));
+    });
+
+    // Otomatik hesapla butonu
+    $('#btnRecalculate').on('click', function() {
+        calculateSummary();
+        $(this).html('✅ Hesaplandı!');
+        setTimeout(() => {
+            $(this).html('🔄 Otomatik Hesapla');
+        }, 1500);
+    });
 
     // Periyodik bakım seçilince tarih hesapla
     $('#periyodikBakim').on('change', function() {

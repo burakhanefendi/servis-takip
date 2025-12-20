@@ -6,6 +6,7 @@
     <title>Cari Detay - {{ $cari->cari_hesap_adi }}</title>
     <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ asset('css/form.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .detail-section {
             background: white;

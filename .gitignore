@@ -25,8 +25,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# cPanel için vendor'u dahil ediyoruz
-# /vendor
+/vendor
 
 # Symlink cPanel'de oluşturulacak
 # /public/storage

@@ -11,10 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Tenant middleware'i web grubuna ekle
-        $middleware->web(append: [
-            \App\Http\Middleware\TenantMiddleware::class,
-        ]);
+        // Multi-tenant devre dışı (daha sonra aktif edilecek)
+        // $middleware->web(append: [
+        //     \App\Http\Middleware\TenantMiddleware::class,
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -57,13 +57,35 @@ class TeklifController extends Controller
                 'notlar' => $request->notlar,
             ]);
             
+            // Ürünleri ekle
+            if ($request->has('products')) {
+                $products = json_decode($request->products, true);
+                foreach ($products as $index => $productData) {
+                    $urun = new TeklifUrun();
+                    $urun->teklif_id = $teklif->id;
+                    $urun->sku = $productData['sku'] ?? '';
+                    $urun->stok_tanimi = $productData['stok_tanimi'];
+                    $urun->miktar = $productData['miktar'];
+                    $urun->birim = $productData['birim'];
+                    $urun->birim_fiyat = $productData['birim_fiyat'];
+                    $urun->kdv_oran = $productData['kdv_oran'];
+                    $urun->indirim_oran = $productData['indirim_oran'] ?? 0;
+                    $urun->depo = $productData['depo'] ?? 'Varsayılan';
+                    $urun->sira_no = $index + 1;
+                    $urun->calculateAmounts(); // Bu metod zaten save() yapıyor
+                }
+                
+                // Teklif toplamlarını güncelle
+                $teklif->calculateTotals();
+            }
+            
             DB::commit();
             
             return response()->json([
                 'success' => true,
                 'message' => 'Teklif başarıyla oluşturuldu.',
                 'teklif_id' => $teklif->id,
-                'redirect' => route('teklif.edit', $teklif->id)
+                'redirect' => route('teklif.show', $teklif->id)
             ]);
             
         } catch (\Exception $e) {
@@ -116,6 +138,32 @@ class TeklifController extends Controller
                 'fotograflar_goster' => $request->has('fotograflar_goster'),
                 'notlar' => $request->notlar,
             ]);
+            
+            // Eski ürünleri sil ve yenileri ekle
+            if ($request->has('products')) {
+                // Eski ürünleri sil
+                TeklifUrun::where('teklif_id', $teklif->id)->delete();
+                
+                // Yeni ürünleri ekle
+                $products = json_decode($request->products, true);
+                foreach ($products as $index => $productData) {
+                    $urun = new TeklifUrun();
+                    $urun->teklif_id = $teklif->id;
+                    $urun->sku = $productData['sku'] ?? '';
+                    $urun->stok_tanimi = $productData['stok_tanimi'];
+                    $urun->miktar = $productData['miktar'];
+                    $urun->birim = $productData['birim'];
+                    $urun->birim_fiyat = $productData['birim_fiyat'];
+                    $urun->kdv_oran = $productData['kdv_oran'];
+                    $urun->indirim_oran = $productData['indirim_oran'] ?? 0;
+                    $urun->depo = $productData['depo'] ?? 'Varsayılan';
+                    $urun->sira_no = $index + 1;
+                    $urun->calculateAmounts(); // Bu metod zaten save() yapıyor
+                }
+                
+                // Teklif toplamlarını güncelle
+                $teklif->calculateTotals();
+            }
             
             DB::commit();
             
@@ -279,5 +327,14 @@ class TeklifController extends Controller
                 'message' => 'Hata: ' . $e->getMessage()
             ], 500);
         }
+    }
+    
+    // PDF Oluşturma
+    public function generatePdf($id)
+    {
+        $teklif = Teklif::with(['cariHesap', 'urunler'])->findOrFail($id);
+        $settings = \App\Models\Setting::getSettings();
+        
+        return view('teklif.pdf', compact('teklif', 'settings'));
     }
 }

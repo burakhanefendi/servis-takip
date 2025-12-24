@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Yeni Teklif Oluştur')
+@section('title', 'Teklif Düzenle - ' . $teklif->teklif_no)
 
 @push('styles')
 <style>
@@ -405,7 +405,7 @@
         background: white;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        max-height: 200px;
+        max-height: 250px;
         overflow-y: auto;
         z-index: 1000;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -413,9 +413,24 @@
     }
     
     .autocomplete-item {
-        padding: 10px 15px;
+        padding: 8px 12px;
         cursor: pointer;
         border-bottom: 1px solid #f0f0f0;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    
+    .autocomplete-item strong {
+        font-size: 14px;
+        font-weight: 600;
+        color: #2d3748;
+        display: block;
+        margin-bottom: 2px;
+    }
+    
+    .autocomplete-item small {
+        font-size: 12px;
+        color: #718096;
     }
     
     .autocomplete-item:hover {
@@ -432,13 +447,14 @@
 <div class="teklif-container">
     <div class="page-header">
         <h1 class="page-title">
-            <i class="fas fa-file-invoice"></i>
-            Yeni Teklif Oluştur
+            <i class="fas fa-edit"></i>
+            Teklif Düzenle - {{ $teklif->teklif_no }}
         </h1>
     </div>
     
     <form id="teklifForm">
         @csrf
+        @method('PUT')
         
         <!-- Üst Kartlar -->
         <div class="form-row">
@@ -452,16 +468,28 @@
                 <div class="form-group">
                     <label>Müşteri Seçin</label>
                     <div style="position: relative;">
-                        <input type="text" id="musteriSearch" placeholder="Müşteri adı yazın..." autocomplete="off">
-                        <input type="hidden" id="cari_hesap_id" name="cari_hesap_id" required>
+                        <input type="text" id="musteriSearch" placeholder="Müşteri adı yazın..." autocomplete="off" value="{{ $teklif->cariHesap->cari_hesap_adi }}">
+                        <input type="hidden" id="cari_hesap_id" name="cari_hesap_id" value="{{ $teklif->cari_hesap_id }}" required>
                         <div id="autocompleteResults" class="autocomplete-results"></div>
                     </div>
                 </div>
                 
                 <div id="customerInfo" class="customer-info">
-                    <div style="text-align: center; color: #9ca3af; padding: 30px 10px;">
-                        <i class="fas fa-user-circle" style="font-size: 32px; margin-bottom: 10px;"></i>
-                        <div>Müşteri seçiniz</div>
+                    <div class="customer-info-item">
+                        <span class="customer-info-label">Cari Adı:</span>
+                        <span class="customer-info-value">{{ $teklif->cariHesap->cari_hesap_adi }}</span>
+                    </div>
+                    <div class="customer-info-item">
+                        <span class="customer-info-label">Telefon:</span>
+                        <span class="customer-info-value">{{ $teklif->cariHesap->gsm ?? $teklif->cariHesap->sabit_telefon ?? '-' }}</span>
+                    </div>
+                    <div class="customer-info-item">
+                        <span class="customer-info-label">E-posta:</span>
+                        <span class="customer-info-value">{{ $teklif->cariHesap->eposta ?? '-' }}</span>
+                    </div>
+                    <div class="customer-info-item">
+                        <span class="customer-info-label">Adres:</span>
+                        <span class="customer-info-value">{{ $teklif->cariHesap->adres ?? '-' }}</span>
                     </div>
                 </div>
             </div>
@@ -475,22 +503,22 @@
                 
                 <div class="form-group">
                     <label>Teklif No</label>
-                    <input type="text" name="teklif_no" value="{{ $teklifNo }}" readonly style="background: #f8fafc;">
+                    <input type="text" name="teklif_no" value="{{ $teklif->teklif_no }}" readonly style="background: #f8fafc;">
                 </div>
                 
                 <div class="form-group">
                     <label>Teklif Başlığı</label>
-                    <input type="text" name="teklif_baslik" placeholder="Teklif başlığını girin">
+                    <input type="text" name="teklif_baslik" placeholder="Teklif başlığını girin" value="{{ $teklif->baslik }}">
                 </div>
                 
                 <div class="form-group">
                     <label>Başlangıç Tarihi</label>
-                    <input type="date" name="baslangic_tarihi" value="{{ date('Y-m-d') }}" required>
+                    <input type="date" name="baslangic_tarihi" value="{{ \Carbon\Carbon::parse($teklif->baslangic_tarihi)->format('Y-m-d') }}" required>
                 </div>
                 
                 <div class="form-group">
                     <label>Geçerlilik Tarihi</label>
-                    <input type="date" name="gecerlilik_tarihi" value="{{ date('Y-m-d', strtotime('+7 days')) }}" required>
+                    <input type="date" name="gecerlilik_tarihi" value="{{ \Carbon\Carbon::parse($teklif->gecerlilik_tarihi)->format('Y-m-d') }}" required>
                 </div>
             </div>
             
@@ -504,18 +532,18 @@
                 <div class="form-group">
                     <label>Para Birimi</label>
                     <div class="currency-buttons">
-                        <button type="button" class="currency-btn active" data-currency="TRY">₺ TRY</button>
-                        <button type="button" class="currency-btn" data-currency="USD">$ USD</button>
-                        <button type="button" class="currency-btn" data-currency="EUR">€ EUR</button>
-                        <button type="button" class="currency-btn" data-currency="GBP">£ GBP</button>
+                        <button type="button" class="currency-btn {{ $teklif->para_birimi == 'TRY' ? 'active' : '' }}" data-currency="TRY">₺ TRY</button>
+                        <button type="button" class="currency-btn {{ $teklif->para_birimi == 'USD' ? 'active' : '' }}" data-currency="USD">$ USD</button>
+                        <button type="button" class="currency-btn {{ $teklif->para_birimi == 'EUR' ? 'active' : '' }}" data-currency="EUR">€ EUR</button>
+                        <button type="button" class="currency-btn {{ $teklif->para_birimi == 'GBP' ? 'active' : '' }}" data-currency="GBP">£ GBP</button>
                     </div>
-                    <input type="hidden" name="para_birimi" value="TRY">
+                    <input type="hidden" name="para_birimi" value="{{ $teklif->para_birimi }}">
                 </div>
                 
                 <div class="form-group">
                     <label>Teklif Fotoğrafları</label>
                     <label class="toggle-switch">
-                        <input type="checkbox" name="fotograflar_goster">
+                        <input type="checkbox" name="fotograflar_goster" {{ $teklif->fotograflar_goster ? 'checked' : '' }}>
                         <span class="toggle-slider"></span>
                     </label>
                     <div class="toggle-label">Sadece müşterilerde gösterilecek</div>
@@ -621,7 +649,7 @@
             
             <!-- Ürün Listesi -->
             <div id="productListContainer">
-                <table class="product-table" id="productTable" style="display: none;">
+                <table class="product-table" id="productTable" style="{{ $teklif->urunler->count() > 0 ? '' : 'display: none;' }}">
                     <thead>
                         <tr>
                             <th>SKU</th>
@@ -635,14 +663,15 @@
                             <th>TEVKİFAT</th>
                             <th>TUTAR (KDV HARİÇ)</th>
                             <th>TUTAR (KDV DAHİL)</th>
+                            <th>İŞLEM</th>
                         </tr>
                     </thead>
                     <tbody id="productTableBody">
-                        <!-- Ürünler buraya eklenecek -->
+                        <!-- Ürünler JS ile yüklenecek -->
                     </tbody>
                 </table>
                 
-                <div id="emptyState" class="empty-state">
+                <div id="emptyState" class="empty-state" style="{{ $teklif->urunler->count() > 0 ? 'display: none;' : '' }}">
                     <i class="fas fa-inbox"></i>
                     <div>Henüz ürün eklenmedi</div>
                     <div style="font-size: 13px; margin-top: 5px;">Yukarıdaki "Ekle" butonuna tıklayarak ürün ekleyebilirsiniz</div>
@@ -653,19 +682,19 @@
             <div class="summary-box" style="max-width: 400px; margin-left: auto;">
                 <div class="summary-item">
                     <span class="summary-label">Mal Hizmet Tutarı:</span>
-                    <span class="summary-value" id="summaryMalHizmet">₺0,00</span>
+                    <span class="summary-value" id="summaryMalHizmet">{{ $teklif->para_birimi == 'TRY' ? '₺' : $teklif->para_birimi }}{{ number_format($teklif->mal_hizmet_tutari ?? 0, 2) }}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Toplam İskonto:</span>
-                    <span class="summary-value" id="summaryIskonto">₺0,00</span>
+                    <span class="summary-value" id="summaryIskonto">{{ $teklif->para_birimi == 'TRY' ? '₺' : $teklif->para_birimi }}{{ number_format($teklif->toplam_iskonto ?? 0, 2) }}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Ara Toplam (KDV Matrahı):</span>
-                    <span class="summary-value" id="summaryAraToplam">₺0,00</span>
+                    <span class="summary-value" id="summaryAraToplam">{{ $teklif->para_birimi == 'TRY' ? '₺' : $teklif->para_birimi }}{{ number_format($teklif->ara_toplam ?? 0, 2) }}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Hesaplanan KDV:</span>
-                    <span class="summary-value" id="summaryKDV">₺0,00</span>
+                    <span class="summary-value" id="summaryKDV">{{ $teklif->para_birimi == 'TRY' ? '₺' : $teklif->para_birimi }}{{ number_format($teklif->hesaplanan_kdv ?? 0, 2) }}</span>
                 </div>
             </div>
         </div>
@@ -678,19 +707,19 @@
             </div>
             
             <div class="form-group">
-                <textarea name="notlar" rows="6" placeholder="Teklif içeriği, ödeme koşulları, teslimat süresi ve diğer önemli notları buraya yazabilirsiniz..."></textarea>
+                <textarea name="notlar" rows="6" placeholder="Teklif içeriği, ödeme koşulları, teslimat süresi ve diğer önemli notları buraya yazabilirsiniz...">{{ $teklif->notlar }}</textarea>
             </div>
         </div>
         
         <!-- Kaydet Butonu -->
         <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px;">
-            <a href="{{ route('teklif.index') }}" class="btn btn-secondary">
+            <a href="{{ route('teklif.show', $teklif->id) }}" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i>
                 Vazgeç
             </a>
             <button type="submit" class="btn btn-success">
                 <i class="fas fa-save"></i>
-                Teklifi Kaydet
+                Değişiklikleri Kaydet
             </button>
         </div>
     </form>
@@ -700,14 +729,37 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    let products = [];
+    let products = {!! json_encode($teklif->urunler->map(function($urun) {
+        return [
+            'id' => $urun->id,
+            'sku' => $urun->sku,
+            'stok_tanimi' => $urun->stok_tanimi,
+            'miktar' => floatval($urun->miktar),
+            'birim' => $urun->birim,
+            'birim_fiyat' => floatval($urun->birim_fiyat),
+            'indirim_oran' => floatval($urun->indirim_oran),
+            'indirim_tutar' => floatval($urun->indirim_tutar),
+            'kdv_oran' => floatval($urun->kdv_oran),
+            'kdv_tutar' => floatval($urun->kdv_tutar),
+            'tevkifat' => floatval($urun->tevkifat ?? 0),
+            'tutar_kdv_haric' => floatval($urun->tutar_kdv_haric),
+            'tutar_kdv_dahil' => floatval($urun->tutar_kdv_dahil),
+            'depo' => $urun->depo
+        ];
+    })->values()) !!};
+    
     let editingIndex = -1;
+    const teklifId = {{ $teklif->id }};
+    
+    // Sayfa yüklendiğinde ürünleri göster
+    renderProductTable();
     
     // Para birimi seçimi
     $('.currency-btn').on('click', function() {
         $('.currency-btn').removeClass('active');
         $(this).addClass('active');
         $('input[name="para_birimi"]').val($(this).data('currency'));
+        renderProductTable();
     });
     
     // Müşteri arama (autocomplete)
@@ -863,14 +915,19 @@ $(document).ready(function() {
                     <td>${product.sku || '-'}</td>
                     <td>${product.stok_tanimi}</td>
                     <td>${product.miktar} ${product.birim}</td>
-                    <td>${currencySymbol}${product.birim_fiyat.toFixed(2)}</td>
-                    <td>${currencySymbol}${product.indirim_tutar.toFixed(2)}</td>
-                    <td>%${product.indirim_oran}</td>
-                    <td>%${product.kdv_oran}</td>
-                    <td>${currencySymbol}${product.kdv_tutar.toFixed(2)}</td>
-                    <td>%${product.tevkifat}</td>
-                    <td>${currencySymbol}${product.tutar_kdv_haric.toFixed(2)}</td>
-                    <td><strong>${currencySymbol}${product.tutar_kdv_dahil.toFixed(2)}</strong></td>
+                    <td>${currencySymbol}${parseFloat(product.birim_fiyat).toFixed(2)}</td>
+                    <td>${currencySymbol}${parseFloat(product.indirim_tutar).toFixed(2)}</td>
+                    <td>%${parseFloat(product.indirim_oran)}</td>
+                    <td>%${parseFloat(product.kdv_oran)}</td>
+                    <td>${currencySymbol}${parseFloat(product.kdv_tutar).toFixed(2)}</td>
+                    <td>%${parseFloat(product.tevkifat)}</td>
+                    <td>${currencySymbol}${parseFloat(product.tutar_kdv_haric).toFixed(2)}</td>
+                    <td><strong>${currencySymbol}${parseFloat(product.tutar_kdv_dahil).toFixed(2)}</strong></td>
+                    <td>
+                        <button type="button" class="btn-icon btn-danger" onclick="removeProduct(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
         });
@@ -879,13 +936,20 @@ $(document).ready(function() {
         updateSummary();
     }
     
+    window.removeProduct = function(index) {
+        if (confirm('Bu ürünü silmek istediğinizden emin misiniz?')) {
+            products.splice(index, 1);
+            renderProductTable();
+        }
+    };
+    
     function updateSummary() {
         let currencySymbol = $('.currency-btn.active').text().split(' ')[0];
         
-        const malHizmet = products.reduce((sum, p) => sum + (p.miktar * p.birim_fiyat), 0);
-        const iskonto = products.reduce((sum, p) => sum + p.indirim_tutar, 0);
-        const araToplam = products.reduce((sum, p) => sum + p.tutar_kdv_haric, 0);
-        const kdv = products.reduce((sum, p) => sum + p.kdv_tutar, 0);
+        const malHizmet = products.reduce((sum, p) => sum + (parseFloat(p.miktar) * parseFloat(p.birim_fiyat)), 0);
+        const iskonto = products.reduce((sum, p) => sum + parseFloat(p.indirim_tutar), 0);
+        const araToplam = products.reduce((sum, p) => sum + parseFloat(p.tutar_kdv_haric), 0);
+        const kdv = products.reduce((sum, p) => sum + parseFloat(p.kdv_tutar), 0);
         
         $('#summaryMalHizmet').text(currencySymbol + malHizmet.toFixed(2));
         $('#summaryIskonto').text(currencySymbol + iskonto.toFixed(2));
@@ -906,15 +970,13 @@ $(document).ready(function() {
         formData.push({ name: 'products', value: JSON.stringify(products) });
         
         $.ajax({
-            url: '{{ route("teklif.store") }}',
+            url: '{{ route("teklif.update", $teklif->id) }}',
             method: 'POST',
             data: $.param(formData),
             success: function(response) {
                 if (response.success) {
                     alert(response.message);
-                    if (response.redirect) {
-                        window.location.href = response.redirect;
-                    }
+                    window.location.href = '{{ route("teklif.show", $teklif->id) }}';
                 }
             },
             error: function(xhr) {

@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/teklif/{id}/edit', [TeklifController::class, 'edit'])->name('teklif.edit');
     Route::put('/teklif/{id}', [TeklifController::class, 'update'])->name('teklif.update');
     Route::delete('/teklif/{id}', [TeklifController::class, 'destroy'])->name('teklif.destroy');
+    Route::get('/teklif/{id}/pdf', [TeklifController::class, 'generatePdf'])->name('teklif.pdf');
     
     // Teklif Ürünleri
     Route::post('/teklif/urun', [TeklifController::class, 'addUrun'])->name('teklif.urun.add');

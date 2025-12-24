@@ -28,15 +28,18 @@ class ServisController extends Controller
     // Cari arama API
     public function searchCari(Request $request)
     {
-        $search = $request->get('search', '');
+        // Hem 'search' hem 'q' parametrelerini kabul et
+        $search = $request->get('search', $request->get('q', ''));
         
-        if (strlen($search) < 3) {
+        if (strlen($search) < 2) {
             return response()->json([]);
         }
 
         $cariList = CariHesap::where('cari_hesap_adi', 'LIKE', "%{$search}%")
             ->orWhere('musteri_kodu', 'LIKE', "%{$search}%")
             ->orWhere('kisa_isim', 'LIKE', "%{$search}%")
+            ->orWhere('gsm', 'LIKE', "%{$search}%")
+            ->orWhere('sabit_telefon', 'LIKE', "%{$search}%")
             ->limit(10)
             ->get(['id', 'cari_hesap_adi', 'musteri_kodu', 'eposta', 'gsm', 'sabit_telefon', 'il', 'ilce', 'adres']);
 

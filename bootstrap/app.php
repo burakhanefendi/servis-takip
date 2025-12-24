@@ -11,10 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Multi-tenant aktif - subdomain bazlı veritabanı yönlendirme
-        $middleware->web(append: [
-            \App\Http\Middleware\TenantMiddleware::class,
-        ]);
+        // Multi-tenant KAPALI - sadece tek subdomain kullanılıyor
+        // $middleware->web(append: [
+        //     \App\Http\Middleware\TenantMiddleware::class,
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

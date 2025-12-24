@@ -79,11 +79,30 @@
                                 <label>Bakım Periyodu <span class="required">*</span></label>
                                 <select name="periyodik_bakim" class="form-control" required>
                                     <option value="Bir Kez" selected>Bir Kez</option>
-                                    <option value="Aylık">Aylık</option>
+                                    <option value="1 Aylık">1 Aylık</option>
+                                    <option value="2 Aylık">2 Aylık</option>
                                     <option value="3 Aylık">3 Aylık</option>
+                                    <option value="4 Aylık">4 Aylık</option>
+                                    <option value="5 Aylık">5 Aylık</option>
                                     <option value="6 Aylık">6 Aylık</option>
-                                    <option value="Yıllık">Yıllık</option>
-                                    <option value="2 Yıllık">2 Yıllık</option>
+                                    <option value="7 Aylık">7 Aylık</option>
+                                    <option value="8 Aylık">8 Aylık</option>
+                                    <option value="9 Aylık">9 Aylık</option>
+                                    <option value="10 Aylık">10 Aylık</option>
+                                    <option value="11 Aylık">11 Aylık</option>
+                                    <option value="12 Aylık">12 Aylık (Yıllık)</option>
+                                    <option value="13 Aylık">13 Aylık</option>
+                                    <option value="14 Aylık">14 Aylık</option>
+                                    <option value="15 Aylık">15 Aylık</option>
+                                    <option value="16 Aylık">16 Aylık</option>
+                                    <option value="17 Aylık">17 Aylık</option>
+                                    <option value="18 Aylık">18 Aylık</option>
+                                    <option value="19 Aylık">19 Aylık</option>
+                                    <option value="20 Aylık">20 Aylık</option>
+                                    <option value="21 Aylık">21 Aylık</option>
+                                    <option value="22 Aylık">22 Aylık</option>
+                                    <option value="23 Aylık">23 Aylık</option>
+                                    <option value="24 Aylık">24 Aylık (2 Yıllık)</option>
                                 </select>
                             </div>
                         </div>

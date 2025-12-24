@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CariHesapController;
 use App\Http\Controllers\CariGroupController;
 use App\Http\Controllers\ServisController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TeklifController;
 
 // Ana sayfa - login'e yönlendir
 Route::get('/', function () {
@@ -42,12 +44,40 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/servis/{id}/complete', [ServisController::class, 'complete'])->name('servis.complete');
     Route::post('/servis/{id}/finish', [ServisController::class, 'finish'])->name('servis.finish');
     
+    // Servis PDF Yazdırma
+    Route::get('/servis/{id}/pdf/teslim-formu', [ServisController::class, 'pdfTeslimFormu'])->name('servis.pdf.teslim');
+    Route::get('/servis/{id}/pdf/kabul-formu', [ServisController::class, 'pdfKabulFormu'])->name('servis.pdf.kabul');
+    Route::get('/servis/{id}/pdf/fis', [ServisController::class, 'pdfFis'])->name('servis.pdf.fis');
+    
     // Bakım Listesi
     Route::get('/bakim-listesi', [ServisController::class, 'bakimListesi'])->name('bakim.index');
     Route::get('/bakim/create', [ServisController::class, 'bakimCreate'])->name('bakim.create');
     Route::post('/bakim', [ServisController::class, 'bakimStore'])->name('bakim.store');
     Route::get('/bakim/{id}', [ServisController::class, 'bakimShow'])->name('bakim.show');
+    Route::get('/bakim/{id}/edit', [ServisController::class, 'bakimEdit'])->name('bakim.edit');
+    Route::put('/bakim/{id}', [ServisController::class, 'bakimUpdate'])->name('bakim.update');
+    Route::delete('/bakim/{id}', [ServisController::class, 'bakimDelete'])->name('bakim.delete');
+    Route::get('/bakim/{id}/convert-to-service', [ServisController::class, 'bakimConvertToService'])->name('bakim.convert');
+    Route::post('/bakim/import', [ServisController::class, 'bakimImport'])->name('bakim.import');
     
     // API - Cari Arama
     Route::get('/api/cari/search', [ServisController::class, 'searchCari'])->name('api.cari.search');
+    
+    // Teklifler
+    Route::get('/teklif', [TeklifController::class, 'index'])->name('teklif.index');
+    Route::get('/teklif/create', [TeklifController::class, 'create'])->name('teklif.create');
+    Route::post('/teklif', [TeklifController::class, 'store'])->name('teklif.store');
+    Route::get('/teklif/{id}', [TeklifController::class, 'show'])->name('teklif.show');
+    Route::get('/teklif/{id}/edit', [TeklifController::class, 'edit'])->name('teklif.edit');
+    Route::put('/teklif/{id}', [TeklifController::class, 'update'])->name('teklif.update');
+    Route::delete('/teklif/{id}', [TeklifController::class, 'destroy'])->name('teklif.destroy');
+    
+    // Teklif Ürünleri
+    Route::post('/teklif/urun', [TeklifController::class, 'addUrun'])->name('teklif.urun.add');
+    Route::put('/teklif/urun/{id}', [TeklifController::class, 'updateUrun'])->name('teklif.urun.update');
+    Route::delete('/teklif/urun/{id}', [TeklifController::class, 'deleteUrun'])->name('teklif.urun.delete');
+    
+    // Ayarlar
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });

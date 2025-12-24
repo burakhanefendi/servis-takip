@@ -126,13 +126,17 @@
                     </span>
                 </div>
 
-                @if($servis->durum !== 'Tamamlandı')
-                <div class="btn-group">
+                <div class="btn-group" style="display: flex; gap: 10px;">
+                    @if($servis->durum !== 'Tamamlandı')
                     <a href="{{ route('servis.complete', $servis->id) }}" class="btn btn-primary">
                         ✅ Servisi Tamamla
                     </a>
+                    @endif
+                    
+                    <button onclick="openPrintModal()" class="btn btn-secondary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <i class="fas fa-print"></i> Yazdır
+                    </button>
                 </div>
-                @endif
             </div>
 
             <!-- Müşteri Bilgileri -->
@@ -314,6 +318,215 @@
         </main>
     </div>
 
+    <!-- Yazdır Modal -->
+    <div id="printModal" class="print-modal">
+        <div class="print-modal-content">
+            <div class="print-modal-header">
+                <h2><i class="fas fa-print"></i> Belge Yazdır</h2>
+                <span class="print-modal-close" onclick="closePrintModal()">&times;</span>
+            </div>
+            <div class="print-modal-body">
+                <p style="color: #666; margin-bottom: 25px;">Yazdırmak istediğiniz belgeyi seçin:</p>
+                
+                <div class="print-options">
+                    <div class="print-option" onclick="printDocument('teslim')">
+                        <div class="print-option-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="print-option-content">
+                            <h3>Teslim Formu</h3>
+                            <p>Cihaz teslim formu yazdır</p>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+
+                    <div class="print-option" onclick="printDocument('kabul')">
+                        <div class="print-option-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="print-option-content">
+                            <h3>Kabul Formu</h3>
+                            <p>Servis kabul formu yazdır</p>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+
+                    <div class="print-option" onclick="printDocument('fis')">
+                        <div class="print-option-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="print-option-content">
+                            <h3>Fiş</h3>
+                            <p>Servis fişi yazdır</p>
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .print-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .print-modal-content {
+            background-color: white;
+            margin: 5% auto;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .print-modal-header {
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .print-modal-header h2 {
+            margin: 0;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .print-modal-close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .print-modal-close:hover {
+            transform: rotate(90deg);
+        }
+
+        .print-modal-body {
+            padding: 30px;
+        }
+
+        .print-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .print-option {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .print-option:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .print-option-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .print-option-icon i {
+            font-size: 28px;
+            color: white;
+        }
+
+        .print-option-content {
+            flex: 1;
+        }
+
+        .print-option-content h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .print-option-content p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .print-option > .fa-chevron-right {
+            color: #667eea;
+            font-size: 20px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .print-option:hover > .fa-chevron-right {
+            opacity: 1;
+            transform: translateX(5px);
+        }
+
+        .btn-secondary {
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
@@ -339,6 +552,44 @@
                 $submenu.toggleClass('open');
             });
         });
+
+        // Yazdır Modal Fonksiyonları
+        function openPrintModal() {
+            document.getElementById('printModal').style.display = 'block';
+        }
+
+        function closePrintModal() {
+            document.getElementById('printModal').style.display = 'none';
+        }
+
+        function printDocument(type) {
+            const servisId = {{ $servis->id }};
+            let url = '';
+            
+            switch(type) {
+                case 'teslim':
+                    url = `/servis/${servisId}/pdf/teslim-formu`;
+                    break;
+                case 'kabul':
+                    url = `/servis/${servisId}/pdf/kabul-formu`;
+                    break;
+                case 'fis':
+                    url = `/servis/${servisId}/pdf/fis`;
+                    break;
+            }
+            
+            if(url) {
+                window.open(url, '_blank');
+            }
+        }
+
+        // Modal dışına tıklandığında kapat
+        window.onclick = function(event) {
+            const modal = document.getElementById('printModal');
+            if (event.target == modal) {
+                closePrintModal();
+            }
+        }
     </script>
 </body>
 </html>

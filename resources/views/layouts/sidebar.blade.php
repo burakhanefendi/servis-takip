@@ -69,11 +69,23 @@
             <span class="menu-title">Stok Yönetimi</span>
             <span class="coming-soon-badge">Yakında</span>
         </a>
-        <a href="#" class="menu-item">
-            <span class="menu-icon"><i class="fas fa-file-pdf"></i></span>
-            <span class="menu-title">PDF Teklif</span>
-            <span class="coming-soon-badge">Yakında</span>
-        </a>
+        
+        <!-- Teklifler -->
+        <div class="menu-item has-submenu {{ Request::is('teklif*') ? 'open' : '' }}" data-submenu="teklif">
+            <span class="menu-icon"><i class="fas fa-file-invoice"></i></span>
+            <span class="menu-title">Teklifler</span>
+            <span class="menu-arrow"><i class="fas fa-chevron-right"></i></span>
+        </div>
+        <div class="submenu {{ Request::is('teklif*') ? 'open' : '' }}" id="submenu-teklif">
+            <a href="{{ route('teklif.create') }}" class="submenu-item {{ Request::is('teklif/create') ? 'active' : '' }}">
+                <span class="submenu-icon"><i class="fas fa-plus"></i></span>
+                <span>Teklif Oluştur</span>
+            </a>
+            <a href="{{ route('teklif.index') }}" class="submenu-item {{ Request::is('teklif') && !Request::is('teklif/create') ? 'active' : '' }}">
+                <span class="submenu-icon"><i class="fas fa-list"></i></span>
+                <span>Teklif Listesi</span>
+            </a>
+        </div>
         <a href="#" class="menu-item">
             <span class="menu-icon"><i class="fas fa-sms"></i></span>
             <span class="menu-title">SMS Gönder</span>
@@ -84,10 +96,9 @@
             <span class="menu-title">SMS Listesi</span>
             <span class="coming-soon-badge">Yakında</span>
         </a>
-        <a href="#" class="menu-item">
+        <a href="{{ route('settings.index') }}" class="menu-item {{ Request::is('settings*') ? 'active' : '' }}">
             <span class="menu-icon"><i class="fas fa-cog"></i></span>
             <span class="menu-title">Ayarlar</span>
-            <span class="coming-soon-badge">Yakında</span>
         </a>
     </nav>
 </aside>

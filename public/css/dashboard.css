@@ -212,6 +212,7 @@ body {
     flex: 1;
     margin-left: 260px;
     padding: 30px;
+    padding-top: 100px; /* Header için boşluk */
     transition: margin-left 0.3s ease;
 }
 
@@ -307,6 +308,7 @@ body {
     .main-content {
         margin-left: 0;
         padding: 20px 15px;
+        padding-top: 90px; /* Header için boşluk (mobil) */
     }
 
     .stats-grid {

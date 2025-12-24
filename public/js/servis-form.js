@@ -52,6 +52,16 @@ $(document).ready(function() {
 
     // Sayfa yüklendiğinde illeri doldur
     populateCities();
+    
+    // Eğer cari bilgisi önceden doluysa il ve ilçeyi ayarla
+    if (window.prefilledCari && window.prefilledCari.il) {
+        setTimeout(function() {
+            $('#il').val(window.prefilledCari.il);
+            if (window.prefilledCari.ilce) {
+                populateDistricts(window.prefilledCari.il, window.prefilledCari.ilce);
+            }
+        }, 100);
+    }
 
     // Mobil menü toggle
     $('#menuToggle').on('click', function() {

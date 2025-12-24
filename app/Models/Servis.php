@@ -71,7 +71,7 @@ class Servis extends Model
         'sms_hatirlatma' => 'boolean',
         'tamamlanma_tarihi' => 'datetime',
         'ilk_bakim_tarihi' => 'datetime',
-        'hatirlatma_zamani' => 'datetime',
+        // 'hatirlatma_zamani' string olarak kalmalı, datetime değil
     ];
 
     // İlişkiler

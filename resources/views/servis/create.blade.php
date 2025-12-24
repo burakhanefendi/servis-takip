@@ -41,7 +41,7 @@
             <form id="servisForm" action="{{ route('servis.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="servis_no" value="{{ $servisNo }}">
-                <input type="hidden" id="cari_hesap_id" name="cari_hesap_id" value="">
+                <input type="hidden" id="cari_hesap_id" name="cari_hesap_id" value="{{ $cariHesap->id ?? '' }}">
 
                 <div class="stepper-container">
                     <!-- Stepper Header -->
@@ -80,27 +80,38 @@
                             <div class="form-row">
                                 <div class="form-group autocomplete-container">
                                     <label for="cari_hesap_tanimi" class="required">Cari Hesap Tanımı</label>
-                                    <input type="text" id="cari_hesap_tanimi" class="form-control" placeholder="En az 3 karakter yazın..." autocomplete="off" required>
+                                    <input type="text" id="cari_hesap_tanimi" class="form-control" 
+                                        placeholder="En az 3 karakter yazın..." autocomplete="off" required
+                                        value="{{ $cariHesap->cari_hesap_adi ?? '' }}"
+                                        {{ $cariHesap ? 'readonly style=background:#f0f0f0;' : '' }}>
                                     <div id="autocomplete-results" class="autocomplete-results"></div>
                                     <span class="error-text" id="error-cari_hesap_id"></span>
+                                    @if($cariHesap)
+                                    <small style="color: #666; margin-top: 5px; display: block;">
+                                        <i class="fas fa-info-circle"></i> Bakım kaydından dönüştürüldü: {{ $cariHesap->musteri_kodu }}
+                                    </small>
+                                    @endif
                                 </div>
                             </div>
 
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="eposta">E-posta</label>
-                                    <input type="email" id="eposta" name="eposta" class="form-control" placeholder="ornek@email.com">
+                                    <input type="email" id="eposta" name="eposta" class="form-control" placeholder="ornek@email.com"
+                                        value="{{ $cariHesap->eposta ?? session('bakim_info.cari.eposta') ?? '' }}">
                                 </div>
                                 <div class="form-group">
                                     <label for="gsm">GSM</label>
-                                    <input type="tel" id="gsm" name="gsm" class="form-control" placeholder="0555 555 55 55">
+                                    <input type="tel" id="gsm" name="gsm" class="form-control" placeholder="0555 555 55 55"
+                                        value="{{ $cariHesap->gsm ?? session('bakim_info.cari.gsm') ?? '' }}">
                                 </div>
                             </div>
 
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="sabit_telefon">Sabit Telefon</label>
-                                    <input type="tel" id="sabit_telefon" name="sabit_telefon" class="form-control" placeholder="0212 555 55 55">
+                                    <input type="tel" id="sabit_telefon" name="sabit_telefon" class="form-control" placeholder="0212 555 55 55"
+                                        value="{{ $cariHesap->sabit_telefon ?? session('bakim_info.cari.sabit_telefon') ?? '' }}">
                                 </div>
                                 <div class="form-group">
                                     <label for="il">İl</label>
@@ -122,7 +133,7 @@
                             <div class="form-row single-column">
                                 <div class="form-group">
                                     <label for="adres">Adres</label>
-                                    <textarea id="adres" name="adres" class="form-control"></textarea>
+                                    <textarea id="adres" name="adres" class="form-control">{{ $cariHesap->adres ?? session('bakim_info.cari.adres') ?? '' }}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -134,11 +145,13 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="marka">Marka</label>
-                                    <input type="text" id="marka" name="marka" class="form-control">
+                                    <input type="text" id="marka" name="marka" class="form-control" 
+                                        value="{{ session('bakim_info.marka') ?? '' }}">
                                 </div>
                                 <div class="form-group">
                                     <label for="model">Model</label>
-                                    <input type="text" id="model" name="model" class="form-control">
+                                    <input type="text" id="model" name="model" class="form-control"
+                                        value="{{ session('bakim_info.model') ?? '' }}">
                                 </div>
                             </div>
 
@@ -310,6 +323,17 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ asset('js/turkey-cities.js') }}"></script>
+    
+    @if($cariHesap || session('bakim_info.cari'))
+    <script>
+        // Cari bilgilerini JavaScript'e aktar
+        window.prefilledCari = {
+            il: '{{ $cariHesap->il ?? session('bakim_info.cari.il') ?? '' }}',
+            ilce: '{{ $cariHesap->ilce ?? session('bakim_info.cari.ilce') ?? '' }}'
+        };
+    </script>
+    @endif
+    
     <script src="{{ asset('js/servis-form.js') }}"></script>
 </body>
 </html>

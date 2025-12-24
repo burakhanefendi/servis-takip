@@ -12,10 +12,17 @@ use Illuminate\Support\Facades\DB;
 class ServisController extends Controller
 {
     // Servis ekle sayfasını göster
-    public function create()
+    public function create(Request $request)
     {
         $servisNo = Servis::generateServisNo();
-        return view('servis.create', compact('servisNo'));
+        $cariHesap = null;
+        
+        // Eğer cari_id parametresi varsa, cari bilgisini getir
+        if ($request->has('cari_id')) {
+            $cariHesap = CariHesap::find($request->cari_id);
+        }
+        
+        return view('servis.create', compact('servisNo', 'cariHesap'));
     }
 
     // Cari arama API
@@ -77,6 +84,13 @@ class ServisController extends Controller
                 'randevu_tarihi' => $request->randevu_tarihi,
                 'durum' => 'İşlemde',
             ]);
+
+            // Bu müşteriye ait "Bekliyor" durumundaki bakımları "İşlemde" yap
+            Servis::where('cari_hesap_id', $request->cari_hesap_id)
+                ->whereNotNull('periyodik_bakim')
+                ->whereNotNull('bakim_tarihi')
+                ->where('durum', 'Bekliyor')
+                ->update(['durum' => 'İşlemde']);
 
             DB::commit();
 
@@ -237,6 +251,16 @@ class ServisController extends Controller
                 'tamamlanma_tarihi' => now(),
             ]);
 
+            // Bu müşteriye ait "İşlemde" durumundaki bakımı "Tamamlandı" yap
+            Servis::where('cari_hesap_id', $servis->cari_hesap_id)
+                ->whereNotNull('periyodik_bakim')
+                ->whereNotNull('bakim_tarihi')
+                ->where('durum', 'İşlemde')
+                ->update([
+                    'durum' => 'Tamamlandı',
+                    'tamamlanma_tarihi' => now()
+                ]);
+
             DB::commit();
 
             return response()->json([
@@ -256,65 +280,171 @@ class ServisController extends Controller
     // Bakım Listesi
     public function bakimListesi(Request $request)
     {
-        // Her müşteri için sadece en son bakım kaydını getir
-        $subQuery = DB::table('servisler')
-            ->select('cari_hesap_id', DB::raw('MAX(id) as max_id'))
+        // Tüm bakım kayıtlarını getir (her müşteri için birden fazla olabilir)
+        // Durum: null (planlandı), Bekliyor, İşlemde, Tamamlandı
+        $query = Servis::with('cariHesap')
             ->whereNotNull('periyodik_bakim')
-            ->whereNotNull('bakim_tarihi')
-            ->where('durum', 'Tamamlandı')
-            ->groupBy('cari_hesap_id');
+            ->whereNotNull('bakim_tarihi');
 
-        $query = Servis::select('servisler.*')
-            ->with('cariHesap')
-            ->joinSub($subQuery, 'latest_bakim', function ($join) {
-                $join->on('servisler.id', '=', 'latest_bakim.max_id');
-            });
-
-        // Periyodik bakım filtresi
-        if ($request->filled('periyodik_bakim')) {
-            $query->where('servisler.periyodik_bakim', $request->periyodik_bakim);
+        // Servis durumu filtresi
+        if ($request->filled('servis_durumu')) {
+            $query->where('durum', $request->servis_durumu);
         }
 
         // Arama
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('servisler.servis_no', 'LIKE', "%{$search}%")
+                $q->where('servis_no', 'LIKE', "%{$search}%")
                   ->orWhereHas('cariHesap', function($q) use ($search) {
                       $q->where('cari_hesap_adi', 'LIKE', "%{$search}%");
                   });
             });
         }
 
-        // Bakım tarihi durumuna göre sıralama
-        $servisler = $query->orderBy('servisler.bakim_tarihi', 'asc')->paginate(20);
+        // İstatistikler için tüm kayıtları kontrol et (durum filtresi eklenmeden önce)
+        $today = now();
+        $tumKayitlar = clone $query; // Query'i durum filtresi eklenmeden klonla
         
-        // Her servise "durum" ekle (geçmiş/yaklaşan/normal)
+        $stats = [
+            'gecmis' => 0,
+            'yaklasan' => 0,
+            'normal' => 0,
+            'toplam' => $tumKayitlar->count()
+        ];
+        
+        // Tüm kayıtlar için durum hesapla (chunk ile memory optimize)
+        $tumKayitlar->chunk(500, function ($kayitlar) use (&$stats, $today) {
+            foreach ($kayitlar as $kayit) {
+                if ($kayit->bakim_tarihi) {
+                    $gunFarki = $today->diffInDays($kayit->bakim_tarihi, false);
+                    
+                    if ($gunFarki < 0) {
+                        $stats['gecmis']++;
+                    } elseif ($gunFarki <= 7) {
+                        $stats['yaklasan']++;
+                    } else {
+                        $stats['normal']++;
+                    }
+                }
+            }
+        });
+        
+        // Bakım durum filtresi (İstatistik kartlarından gelen) - İstatistikler hesaplandıktan sonra uygula
+        $durumFilter = $request->input('durum_filter');
+        if ($durumFilter && in_array($durumFilter, ['gecmis', 'yaklasan', 'normal'])) {
+            $today = now();
+            $weekLater = now()->addDays(7);
+            
+            if ($durumFilter === 'gecmis') {
+                // Geçmiş bakımlar (tarihi geçmiş)
+                $query->where('bakim_tarihi', '<', $today);
+            } elseif ($durumFilter === 'yaklasan') {
+                // Yaklaşan bakımlar (7 gün içinde)
+                $query->whereBetween('bakim_tarihi', [$today, $weekLater]);
+            } elseif ($durumFilter === 'normal') {
+                // Normal bakımlar (7+ gün sonra)
+                $query->where('bakim_tarihi', '>', $weekLater);
+            }
+        }
+        
+        // Sayfa başına kayıt sayısı (varsayılan: 50)
+        $perPage = $request->input('per_page', 50);
+        if (!in_array($perPage, [20, 50, 100, 200])) {
+            $perPage = 50;
+        }
+        
+        // Sıralama seçeneği (varsayılan: akıllı sıralama)
+        $sortBy = $request->input('sort_by', 'smart');
+        
+        // Akıllı sıralama: Yaklaşan bakımlar önce, sonra normal, en sonda geçmişler
+        if ($sortBy === 'smart') {
+            $today = now()->format('Y-m-d H:i:s');
+            $weekLater = now()->addDays(7)->format('Y-m-d H:i:s');
+            
+            $servisler = $query->orderByRaw("
+                CASE 
+                    WHEN bakim_tarihi BETWEEN ? AND ? THEN 1  -- Yaklaşan (7 gün içinde)
+                    WHEN bakim_tarihi > ? THEN 2              -- Normal (7+ gün sonra)
+                    ELSE 3                                     -- Geçmiş
+                END
+            ", [$today, $weekLater, $weekLater])
+            ->orderBy('bakim_tarihi', 'asc')
+            ->paginate($perPage);
+        } elseif ($sortBy === 'date_asc') {
+            // Tarihe göre artan (eskiden yeniye)
+            $servisler = $query->orderBy('bakim_tarihi', 'asc')->paginate($perPage);
+        } elseif ($sortBy === 'date_desc') {
+            // Tarihe göre azalan (yeniden eskiye)
+            $servisler = $query->orderBy('bakim_tarihi', 'desc')->paginate($perPage);
+        } else {
+            // Varsayılan
+            $servisler = $query->orderBy('bakim_tarihi', 'asc')->paginate($perPage);
+        }
+        
+        // Her servise "durum" ekle ve otomatik güncelle
         $servisler->getCollection()->transform(function ($servis) {
             $bakimTarihi = $servis->bakim_tarihi;
             $today = now();
+            $weekLater = $today->copy()->addDays(7);
             
             if ($bakimTarihi) {
                 $gunFarki = $today->diffInDays($bakimTarihi, false);
+                $bakimTarihiCarbon = \Carbon\Carbon::parse($bakimTarihi);
+                
+                // Bu müşteriye ait açık (tamamlanmamış) servis var mı kontrol et
+                $acikServisVar = Servis::where('cari_hesap_id', $servis->cari_hesap_id)
+                    ->whereIn('durum', ['İşlemde', 'Beklemede'])
+                    ->where('id', '!=', $servis->id)
+                    ->whereNull('periyodik_bakim')
+                    ->exists();
+                
+                // Durumu hesapla
+                $yeniDurum = null;
+                
+                if ($servis->durum == 'Tamamlandı') {
+                    // Tamamlanmış ise olduğu gibi kalsın
+                    $yeniDurum = 'Tamamlandı';
+                } elseif ($acikServisVar) {
+                    // Açık servis varsa → İşlemde
+                    $yeniDurum = 'İşlemde';
+                } else {
+                    // Açık servis yoksa → Bekliyor
+                    $yeniDurum = 'Bekliyor';
+                }
+                
+                // Eğer durum değiştiyse güncelle
+                if ($servis->durum != $yeniDurum) {
+                    $servis->update(['durum' => $yeniDurum]);
+                    $servis->durum = $yeniDurum;
+                }
+                
+                // Renklendirme için (tarihe göre aciliyet)
+                // Bakım tarihi geldi mi kontrol et (7 gün içinde veya geçmiş)
+                $bakimZamaniGeldi = $bakimTarihiCarbon->lessThanOrEqualTo($weekLater);
                 
                 if ($gunFarki < 0) {
-                    $servis->bakim_durum = 'gecmis'; // Geçmiş (kırmızı)
+                    $servis->bakim_durum = 'gecmis'; // Tarihi geçmiş (kırmızı)
+                    $servis->aciliyet = 'yuksek'; // Acil!
                 } elseif ($gunFarki <= 7) {
                     $servis->bakim_durum = 'yaklasan'; // Yaklaşan (sarı)
+                    $servis->aciliyet = 'orta';
                 } else {
                     $servis->bakim_durum = 'normal'; // Normal (yeşil)
+                    $servis->aciliyet = 'dusuk';
                 }
                 
                 $servis->gun_farki = round(abs($gunFarki));
             } else {
                 $servis->bakim_durum = 'belirsiz';
                 $servis->gun_farki = null;
+                $servis->aciliyet = 'dusuk';
             }
             
             return $servis;
         });
 
-        return view('bakim.index', compact('servisler'));
+        return view('bakim.index', compact('servisler', 'stats', 'durumFilter'));
     }
 
     // Manuel Bakım Ekle - Form
@@ -365,6 +495,9 @@ class ServisController extends Controller
                     break;
             }
 
+            // Bakım durumu her zaman "Bekliyor" olarak başlar (servis açılmamış)
+            $bakimDurumu = 'Bekliyor';
+
             $servis = Servis::create([
                 'servis_no' => Servis::generateServisNo(),
                 'cari_hesap_id' => $request->cari_hesap_id,
@@ -378,8 +511,8 @@ class ServisController extends Controller
                 'bakim_lokasyonu' => $request->bakim_lokasyonu,
                 'sms_hatirlatma' => $request->has('sms_hatirlatma') ? true : false,
                 'hatirlatma_zamani' => $request->hatirlatma_zamani,
-                'durum' => 'Tamamlandı', // İlk bakım yapılmış sayılır
-                'tamamlanma_tarihi' => $request->ilk_bakim_tarihi,
+                'durum' => $bakimDurumu,
+                'tamamlanma_tarihi' => null,
             ]);
 
             DB::commit();
@@ -432,5 +565,336 @@ class ServisController extends Controller
         }
         
         return view('bakim.show', compact('bakim', 'gecmisBakimlar'));
+    }
+
+    // Bakım Düzenleme Formu
+    public function bakimEdit($id)
+    {
+        $bakim = Servis::with('cariHesap')->findOrFail($id);
+        return view('bakim.edit', compact('bakim'));
+    }
+
+    // Bakım Güncelleme
+    public function bakimUpdate(Request $request, $id)
+    {
+        $bakim = Servis::findOrFail($id);
+
+        $request->validate([
+            'marka' => 'nullable|string|max:255',
+            'model' => 'nullable|string|max:255',
+            'periyodik_bakim' => 'required|string',
+            'bakim_tarihi' => 'nullable|date',
+            'bakim_lokasyonu' => 'nullable|string|max:255',
+            'bakim_icerigi' => 'nullable|string',
+            'sms_hatirlatma' => 'nullable|boolean',
+            'hatirlatma_zamani' => 'nullable|string',
+        ]);
+
+        // Eğer periyot değişmişse ve tarih girilmemişse, tarihi otomatik hesapla
+        $bakimTarihi = $request->bakim_tarihi;
+        
+        if (!$bakimTarihi || $request->periyodik_bakim != $bakim->periyodik_bakim) {
+            // Başlangıç tarihi olarak ilk bakım tarihi veya tamamlanma tarihini kullan
+            $baslangicTarihi = $bakim->ilk_bakim_tarihi ?? $bakim->tamamlanma_tarihi ?? now();
+            
+            // Periyoda göre yeni tarihi hesapla
+            $bakimTarihi = $this->calculateNextBakimTarihi($baslangicTarihi, $request->periyodik_bakim);
+        }
+
+        $bakim->update([
+            'marka' => $request->marka,
+            'model' => $request->model,
+            'periyodik_bakim' => $request->periyodik_bakim,
+            'bakim_tarihi' => $bakimTarihi,
+            'bakim_lokasyonu' => $request->bakim_lokasyonu,
+            'bakim_icerigi' => $request->bakim_icerigi,
+            'sms_hatirlatma' => $request->has('sms_hatirlatma') ? true : false,
+            'hatirlatma_zamani' => $request->hatirlatma_zamani,
+        ]);
+
+        return redirect()->route('bakim.show', $id)
+            ->with('success', 'Bakım bilgileri başarıyla güncellendi! ' . 
+                ($request->periyodik_bakim != $bakim->periyodik_bakim ? 
+                'Bakım tarihi yeni periyoda göre güncellendi.' : ''));
+    }
+
+    // Yardımcı fonksiyon: Periyoda göre bakım tarihi hesapla
+    private function calculateNextBakimTarihi($baslangicTarihi, $periyot)
+    {
+        $tarih = \Carbon\Carbon::parse($baslangicTarihi);
+        
+        // "X Aylık" formatını parse et (örn: "8 Aylık" -> 8)
+        if (preg_match('/^(\d+)\s*Aylık/i', $periyot, $matches)) {
+            $aylar = (int)$matches[1];
+            return $tarih->addMonths($aylar);
+        }
+        
+        // Özel durumlar
+        switch ($periyot) {
+            case 'Aylık':
+                return $tarih->addMonth();
+            case 'Yıllık':
+                return $tarih->addYear();
+            case '2 Yıllık':
+                return $tarih->addYears(2);
+            case 'Bir Kez':
+            default:
+                return $tarih;
+        }
+    }
+
+    // Bakım Silme
+    public function bakimDelete($id)
+    {
+        $bakim = Servis::findOrFail($id);
+        
+        // Bakım bilgilerini temizle (servisi silmek yerine)
+        $bakim->update([
+            'periyodik_bakim' => null,
+            'bakim_tarihi' => null,
+            'bakim_lokasyonu' => null,
+            'bakim_icerigi' => null,
+            'sms_hatirlatma' => false,
+            'hatirlatma_zamani' => null,
+            'ilk_bakim_tarihi' => null,
+        ]);
+
+        return redirect()->route('bakim.index')
+            ->with('success', 'Bakım takibi başarıyla kaldırıldı!');
+    }
+
+    // Servise Dönüştür
+    public function bakimConvertToService($id)
+    {
+        $bakim = Servis::with('cariHesap')->findOrFail($id);
+        
+        // Servis oluşturma sayfasına yönlendir, cari bilgisiyle
+        return redirect()->route('servis.create', ['cari_id' => $bakim->cari_hesap_id])
+            ->with('bakim_info', [
+                'bakim_id' => $bakim->id, // Bakım ID'sini de gönder
+                'marka' => $bakim->marka,
+                'model' => $bakim->model,
+                'bakim_notu' => 'Periyodik bakım: ' . $bakim->periyodik_bakim,
+                'cari' => $bakim->cariHesap
+            ]);
+    }
+
+    // Bakım İçe Aktarma
+    public function bakimImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:10240'
+        ]);
+
+        $file = $request->file('file');
+        $fileContent = file_get_contents($file->getRealPath());
+        
+        // UTF-8 encode - Windows-1254 (Türkçe) veya ISO-8859-9'dan dönüştür
+        $encoding = mb_detect_encoding($fileContent, ['UTF-8', 'Windows-1254', 'ISO-8859-9', 'ISO-8859-1'], true);
+        if ($encoding && $encoding !== 'UTF-8') {
+            $fileContent = mb_convert_encoding($fileContent, 'UTF-8', $encoding);
+        }
+        
+        // Satır sonlarını normalize et (Windows \r\n, Mac \r, Unix \n)
+        $fileContent = str_replace(["\r\n", "\r"], "\n", $fileContent);
+        
+        $lines = explode("\n", $fileContent);
+        
+        // İlk satırdan delimiter'ı tespit et (virgül veya noktalı virgül)
+        $firstLine = $lines[0] ?? '';
+        $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+        
+        $header = str_getcsv(array_shift($lines), $delimiter);
+        
+        // BOM karakterini temizle
+        if (!empty($header[0])) {
+            $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]);
+        }
+        
+        $imported = 0;
+        $skipped = 0;
+        $errors = [];
+        $debug = []; // Debug için
+        
+        foreach ($lines as $lineNumber => $line) {
+            if (empty(trim($line))) continue;
+            
+            $data = str_getcsv($line, $delimiter);
+            
+            // Debug: İlk 3 satırı logla
+            if ($lineNumber < 3) {
+                $debug[] = "Satır " . ($lineNumber + 1) . " - Data count: " . count($data) . ", Header count: " . count($header);
+            }
+            
+            if (count($data) < count($header)) {
+                $skipped++;
+                $errors[] = "Satır " . ($lineNumber + 2) . ": Eksik kolon (Beklenen: " . count($header) . ", Gelen: " . count($data) . ")";
+                continue;
+            }
+            
+            $row = array_combine($header, $data);
+            
+            try {
+                // Müşteri ünvanına göre cari hesap bul
+                $musteriUnvani = trim($row['Müşteri Ünvanı'] ?? '');
+                
+                if (empty($musteriUnvani)) {
+                    $skipped++;
+                    $errors[] = "Satır " . ($lineNumber + 2) . ": Müşteri ünvanı boş";
+                    continue;
+                }
+                
+                // Önce tam eşleşme dene
+                $cariHesap = CariHesap::where('cari_hesap_adi', $musteriUnvani)->first();
+                
+                // Bulamazsan kısmi eşleşme dene
+                if (!$cariHesap) {
+                    $cariHesap = CariHesap::where('cari_hesap_adi', 'LIKE', "%{$musteriUnvani}%")->first();
+                }
+                
+                // Hala bulamazsan tersten dene (Excel'deki isim sistemdeki ismin bir parçası olabilir)
+                if (!$cariHesap) {
+                    $cariHesap = CariHesap::where('cari_hesap_adi', 'LIKE', "%{$musteriUnvani}%")
+                        ->orWhere(function($query) use ($musteriUnvani) {
+                            // İsimdeki fazladan boşlukları temizle ve tekrar dene
+                            $cleanName = preg_replace('/\s+/', ' ', $musteriUnvani);
+                            $query->where('cari_hesap_adi', $cleanName)
+                                  ->orWhere('cari_hesap_adi', 'LIKE', "%{$cleanName}%");
+                        })
+                        ->first();
+                }
+                
+                if (!$cariHesap) {
+                    $skipped++;
+                    $errors[] = "Satır " . ($lineNumber + 2) . ": Müşteri bulunamadı - '{$musteriUnvani}' (Sistemde kayıtlı değil)";
+                    continue;
+                }
+                
+                // Bakım tarihi parse et
+                $bakimTarihi = null;
+                if (!empty($row['Bakım Tarihi'])) {
+                    try {
+                        // ISO formatı (2024-07-09 veya 2024-07-09 13:39:00)
+                        $bakimTarihi = \Carbon\Carbon::parse($row['Bakım Tarihi']);
+                    } catch (\Exception $e) {
+                        try {
+                            // Türkçe tarih formatı (dd.mm.yyyy veya dd.mm.yyyy hh:mm:ss)
+                            $tarihStr = trim($row['Bakım Tarihi']);
+                            
+                            // Saat varsa format: d.m.Y H:i:s
+                            if (strpos($tarihStr, ':') !== false) {
+                                $bakimTarihi = \Carbon\Carbon::createFromFormat('d.m.Y H:i:s', $tarihStr);
+                            } else {
+                                // Sadece tarih: d.m.Y
+                                $bakimTarihi = \Carbon\Carbon::createFromFormat('d.m.Y', $tarihStr);
+                            }
+                        } catch (\Exception $e2) {
+                            $errors[] = "Satır " . ($lineNumber + 2) . ": Geçersiz tarih formatı: {$row['Bakım Tarihi']}";
+                        }
+                    }
+                }
+                
+                // Servis numarası oluştur
+                $servisNo = Servis::generateServisNo();
+                
+                // Bakım periyodunu normalize et (küçük harf -> büyük harf)
+                $bakimPeriyodu = $row['Bakım Periyodu'] ?? null;
+                if ($bakimPeriyodu) {
+                    $periyotLower = strtolower(trim($bakimPeriyodu));
+                    
+                    // "Bir kez" -> "Bir Kez" gibi düzeltmeler
+                    $periyotMap = [
+                        'bir kez' => 'Bir Kez',
+                        'aylık' => '1 Aylık',
+                        'yıllık' => '12 Aylık',
+                    ];
+                    
+                    if (isset($periyotMap[$periyotLower])) {
+                        $bakimPeriyodu = $periyotMap[$periyotLower];
+                    } else {
+                        // "8 aylık" -> "8 Aylık" gibi büyük harf düzeltmesi
+                        if (preg_match('/^(\d+)\s*aylık$/i', $periyotLower, $matches)) {
+                            $bakimPeriyodu = $matches[1] . ' Aylık';
+                        }
+                    }
+                }
+                
+                // Eğer bakım periyodu varsa ve bakım tarihi yoksa, bir sonraki bakım tarihini hesapla
+                if ($bakimPeriyodu && $bakimPeriyodu !== 'Bir Kez' && $bakimTarihi) {
+                    $ilkBakimTarihi = $bakimTarihi;
+                    $bakimTarihi = $this->calculateNextBakimTarihi($ilkBakimTarihi, $bakimPeriyodu);
+                } else {
+                    $ilkBakimTarihi = $bakimTarihi;
+                }
+                
+                // Bakım durumu her zaman "Bekliyor" olarak başlar (servis açılmamış)
+                $bakimDurumu = 'Bekliyor';
+                
+                // Bakım kaydı oluştur
+                Servis::create([
+                    'servis_no' => $servisNo,
+                    'cari_hesap_id' => $cariHesap->id,
+                    'marka' => $row['Marka'] ?? null,
+                    'model' => $row['Model'] ?? null,
+                    'periyodik_bakim' => $bakimPeriyodu,
+                    'bakim_tarihi' => $bakimTarihi,
+                    'bakim_icerigi' => $row['Bakım İçeriği'] ?? null,
+                    'bakim_lokasyonu' => $row['Bakım Lokasyonu'] ?? null,
+                    'personel' => $row['Personel'] ?? null,
+                    'teknisyenin_yorumu' => $row['Bakım Notu'] ?? null,
+                    'durum' => $bakimDurumu,
+                    'ilk_bakim_tarihi' => $ilkBakimTarihi,
+                    'tamamlanma_tarihi' => null,
+                ]);
+                
+                $imported++;
+                
+            } catch (\Exception $e) {
+                $skipped++;
+                $errors[] = "Satır " . ($lineNumber + 2) . ": " . $e->getMessage();
+            }
+        }
+        
+        $message = "{$imported} bakım kaydı başarıyla içe aktarıldı.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} kayıt atlandı.";
+        }
+        
+        // Debug bilgisi ekle
+        if (!empty($debug)) {
+            $message .= " | Delimiter: " . ($delimiter === ';' ? 'noktalı virgül' : 'virgül');
+            $message .= " | Kolon sayısı: " . count($header);
+        }
+        
+        return redirect()->route('bakim.index')
+            ->with('success', $message)
+            ->with('import_errors', $errors)
+            ->with('import_debug', $debug);
+    }
+
+    // PDF Yazdırma Metodları
+    
+    public function pdfTeslimFormu($id)
+    {
+        $servis = Servis::with('cariHesap')->findOrFail($id);
+        $settings = \App\Models\Setting::getSettings();
+        
+        return view('servis.pdf.teslim-formu', compact('servis', 'settings'));
+    }
+
+    public function pdfKabulFormu($id)
+    {
+        $servis = Servis::with('cariHesap')->findOrFail($id);
+        $settings = \App\Models\Setting::getSettings();
+        
+        return view('servis.pdf.kabul-formu', compact('servis', 'settings'));
+    }
+
+    public function pdfFis($id)
+    {
+        $servis = Servis::with('cariHesap', 'urunler')->findOrFail($id);
+        $settings = \App\Models\Setting::getSettings();
+        
+        return view('servis.pdf.fis', compact('servis', 'settings'));
     }
 }

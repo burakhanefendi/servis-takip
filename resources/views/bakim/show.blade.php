@@ -241,15 +241,19 @@
                     <a href="{{ route('bakim.index') }}" class="btn-header">
                         <i class="fas fa-arrow-left"></i> Geri Dön
                     </a>
-                    <button class="btn-header btn-success">
+                    <a href="{{ route('bakim.convert', $bakim->id) }}" class="btn-header btn-success">
                         <i class="fas fa-redo"></i> Servise Dönüştür
-                    </button>
-                    <button class="btn-header btn-primary">
+                    </a>
+                    <a href="{{ route('bakim.edit', $bakim->id) }}" class="btn-header btn-primary">
                         <i class="fas fa-edit"></i> Düzenle
-                    </button>
-                    <button class="btn-header btn-danger">
-                        <i class="fas fa-trash"></i> Sil
-                    </button>
+                    </a>
+                    <form action="{{ route('bakim.delete', $bakim->id) }}" method="POST" style="display: inline;" onsubmit="return confirm('Bu bakım takibini kaldırmak istediğinizden emin misiniz?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn-header btn-danger">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </form>
                 </div>
             </div>
 

@@ -82,3 +82,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });
+
+
+Route::get('/temizle', function() {
+    // Ayar önbelleğini temizle
+    Artisan::call('config:clear');
+    // Rota önbelleğini temizle
+    Artisan::call('route:clear');
+    // View (Görünüm) önbelleğini temizle
+    Artisan::call('view:clear');
+    // Uygulama önbelleğini temizle
+    Artisan::call('cache:clear');
+    
+    return "Tüm sistem önbelleği temizlendi!";
+});

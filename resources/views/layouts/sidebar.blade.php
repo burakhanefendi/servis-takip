@@ -96,6 +96,12 @@
             <span class="menu-title">SMS Listesi</span>
             <span class="coming-soon-badge">Yakında</span>
         </a>
+        <!-- Tenant Yönetimi -->
+        <a href="{{ route('admin.tenants.index') }}" class="menu-item {{ Request::is('admin/tenants*') ? 'active' : '' }}">
+            <span class="menu-icon"><i class="fas fa-building"></i></span>
+            <span class="menu-title">Tenant Yönetimi</span>
+        </a>
+        
         <a href="{{ route('settings.index') }}" class="menu-item {{ Request::is('settings*') ? 'active' : '' }}">
             <span class="menu-icon"><i class="fas fa-cog"></i></span>
             <span class="menu-title">Ayarlar</span>

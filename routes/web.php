@@ -7,6 +7,7 @@ use App\Http\Controllers\CariGroupController;
 use App\Http\Controllers\ServisController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TeklifController;
+use App\Http\Controllers\ProfileController;
 
 // Ana sayfa - login'e yönlendir
 Route::get('/', function () {
@@ -81,6 +82,12 @@ Route::middleware(['auth'])->group(function () {
     // Ayarlar
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
+    
+    // Profil
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile/name', [ProfileController::class, 'updateName'])->name('profile.updateName');
+    Route::put('/profile/email', [ProfileController::class, 'updateEmail'])->name('profile.updateEmail');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.updatePassword');
 });
 
 

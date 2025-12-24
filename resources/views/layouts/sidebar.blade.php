@@ -96,6 +96,10 @@
             <span class="menu-title">SMS Listesi</span>
             <span class="coming-soon-badge">Yakında</span>
         </a>
+        <a href="{{ route('profile.index') }}" class="menu-item {{ Request::is('profile*') ? 'active' : '' }}">
+            <span class="menu-icon"><i class="fas fa-user-circle"></i></span>
+            <span class="menu-title">Profil</span>
+        </a>
         <a href="{{ route('settings.index') }}" class="menu-item {{ Request::is('settings*') ? 'active' : '' }}">
             <span class="menu-icon"><i class="fas fa-cog"></i></span>
             <span class="menu-title">Ayarlar</span>

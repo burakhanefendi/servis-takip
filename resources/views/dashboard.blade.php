@@ -15,10 +15,12 @@
             <h1><i class="fas fa-tools"></i> Servis Takip Sistemi</h1>
         </div>
         <div class="header-right">
-            <div class="user-info">
-                <div class="user-name">{{ Auth::user()->name ?? 'Kullanıcı' }}</div>
-                <div class="user-email">{{ Auth::user()->email }}</div>
-            </div>
+            <a href="{{ route('profile.index') }}" class="user-info-link">
+                <div class="user-info">
+                    <div class="user-name">{{ Auth::user()->name ?? 'Kullanıcı' }}</div>
+                    <div class="user-email">{{ Auth::user()->email }}</div>
+                </div>
+            </a>
             <form action="{{ route('logout') }}" method="POST" style="display: inline;">
                 @csrf
                 <button type="submit" class="btn-logout">Çıkış Yap</button>

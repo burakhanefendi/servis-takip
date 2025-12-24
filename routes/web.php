@@ -82,11 +82,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
     
-    // Tenant Yönetimi (Admin)
-    Route::prefix('admin/tenants')->name('admin.tenants.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\TenantAdminController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\TenantAdminController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\TenantAdminController::class, 'store'])->name('store');
-        Route::delete('/{id}', [\App\Http\Controllers\TenantAdminController::class, 'destroy'])->name('destroy');
-    });
+    // Tenant Yönetimi (Sadece Ana Domain - Admin)
+    Route::prefix('admin/tenants')->name('admin.tenants.')
+        ->middleware(\App\Http\Middleware\AdminOnly::class)
+        ->group(function () {
+            Route::get('/', [\App\Http\Controllers\TenantAdminController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\TenantAdminController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\TenantAdminController::class, 'store'])->name('store');
+            Route::delete('/{id}', [\App\Http\Controllers\TenantAdminController::class, 'destroy'])->name('destroy');
+        });
 });

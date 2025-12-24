@@ -69,6 +69,10 @@ class TenantMiddleware
     {
         // Ana domain için admin panel veya landing page göster
         // Şimdilik normal akışa devam et (default DB kullanılır)
+        
+        // Session'ı temizle (tenant bilgisi olmasın)
+        session()->forget(['tenant_id', 'tenant_name', 'tenant_subdomain', 'tenant_database']);
+        
         return $next($request);
     }
 }

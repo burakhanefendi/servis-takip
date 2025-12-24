@@ -21,14 +21,34 @@
             <h1><i class="fas fa-tools"></i> Servis Takip Sistemi</h1>
         </div>
         <div class="header-right">
-            <div class="user-info">
-                <div class="user-name">{{ Auth::user()->name ?? 'Kullanıcı' }}</div>
-                <div class="user-email">{{ Auth::user()->email ?? '' }}</div>
+            <div class="user-menu-wrapper">
+                <div class="user-menu-trigger" id="userMenuTrigger">
+                    <div class="user-info">
+                        <div class="user-name">{{ Auth::user()->name ?? 'Kullanıcı' }}</div>
+                        <div class="user-email">{{ Auth::user()->email ?? '' }}</div>
+                    </div>
+                    <i class="fas fa-chevron-down user-menu-icon"></i>
+                </div>
+                
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="{{ route('profile.index') }}" class="dropdown-item">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Profil Ayarları</span>
+                    </a>
+                    <a href="{{ route('settings.index') }}" class="dropdown-item">
+                        <i class="fas fa-cog"></i>
+                        <span>Sistem Ayarları</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <form action="{{ route('logout') }}" method="POST">
+                        @csrf
+                        <button type="submit" class="dropdown-item logout-item">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <span>Çıkış Yap</span>
+                        </button>
+                    </form>
+                </div>
             </div>
-            <form action="{{ route('logout') }}" method="POST" style="display: inline;">
-                @csrf
-                <button type="submit" class="btn-logout">Çıkış Yap</button>
-            </form>
         </div>
     </header>
 
@@ -79,6 +99,19 @@
                 if ($(window).width() <= 768) {
                     $('#sidebar').removeClass('active');
                     $('#sidebarOverlay').removeClass('active');
+                }
+            });
+
+            // User dropdown menu
+            $('#userMenuTrigger').on('click', function(e) {
+                e.stopPropagation();
+                $('#userDropdown').toggleClass('active');
+            });
+
+            // Dropdown dışına tıklayınca kapat
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.user-menu-wrapper').length) {
+                    $('#userDropdown').removeClass('active');
                 }
             });
         });

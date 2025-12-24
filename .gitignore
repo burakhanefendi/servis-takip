@@ -15,10 +15,18 @@
 /node_modules
 /public/build
 /public/hot
-/public/storage
 /storage/*.key
 /storage/pail
-/vendor
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# cPanel için vendor'u dahil ediyoruz
+# /vendor
+
+# Symlink cPanel'de oluşturulacak
+# /public/storage
